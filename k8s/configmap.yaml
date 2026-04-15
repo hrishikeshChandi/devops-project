@@ -1,0 +1,10 @@
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: orchestrator-config
+data:
+  MONGO_URI: "mongodb://mongodb-service:27017/"
+  HOST: "api-service"
+  PORT: "8000"
+  RL_ENABLED: "true"
+  DISABLE_WORKER_SPAWN: "true"

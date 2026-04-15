@@ -1,0 +1,109 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: api-deployment
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: orchestrator-api
+  template:
+    metadata:
+      labels:
+        app: orchestrator-api
+    spec:
+      containers:
+        - name: api
+          image: hrishikeshchandi/orchestrator-api:latest
+          ports:
+            - containerPort: 8000
+          envFrom:
+            - configMapRef:
+                name: orchestrator-config
+
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: worker-deployment
+spec:
+  replicas: 2
+  selector:
+    matchLabels:
+      app: orchestrator-worker
+  template:
+    metadata:
+      labels:
+        app: orchestrator-worker
+    spec:
+      containers:
+        - name: worker
+          image: hrishikeshchandi/orchestrator-worker:latest
+          envFrom:
+            - configMapRef:
+                name: orchestrator-config
+
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: recovery-deployment
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: orchestrator-recovery
+  template:
+    metadata:
+      labels:
+        app: orchestrator-recovery
+    spec:
+      containers:
+        - name: recovery
+          image: hrishikeshchandi/orchestrator-recovery:latest
+          envFrom:
+            - configMapRef:
+                name: orchestrator-config
+
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: heartbeat-deployment
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: orchestrator-heartbeat
+  template:
+    metadata:
+      labels:
+        app: orchestrator-heartbeat
+    spec:
+      containers:
+        - name: heartbeat
+          image: hrishikeshchandi/orchestrator-heartbeat:latest
+          envFrom:
+            - configMapRef:
+                name: orchestrator-config
+
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: frontend-deployment
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: orchestrator-frontend
+  template:
+    metadata:
+      labels:
+        app: orchestrator-frontend
+    spec:
+      containers:
+        - name: frontend
+          image: hrishikeshchandi/orchestrator-frontend:latest
+          ports:
+            - containerPort: 80
