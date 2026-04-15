@@ -1,0 +1,949 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta
+      name="viewport"
+      content="width=device-width, initial-scale=1.0, user-scalable=yes"
+    />
+    <title>NeoOrch · RL Task Orchestrator</title>
+    <!-- Google Fonts & Font Awesome -->
+    <link
+      href="https://fonts.googleapis.com/css2?family=Inter:opsz,wght@14..32,300;14..32,400;14..32,500;14..32,600;14..32,700;14..32,800&display=swap"
+      rel="stylesheet"
+    />
+    <link
+      rel="stylesheet"
+      href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0-beta3/css/all.min.css"
+    />
+    <style>
+      * {
+        margin: 0;
+        padding: 0;
+        box-sizing: border-box;
+      }
+
+      body {
+        background: linear-gradient(145deg, #f0f4fe 0%, #e9eef9 100%);
+        font-family: "Inter", sans-serif;
+        padding: 2rem 1.5rem;
+        color: #1a2634;
+      }
+
+      .dashboard-container {
+        max-width: 1600px;
+        margin: 0 auto;
+      }
+
+      /* header */
+      .header {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        flex-wrap: wrap;
+        margin-bottom: 2rem;
+        background: rgba(255, 255, 255, 0.65);
+        backdrop-filter: blur(8px);
+        padding: 1rem 2rem;
+        border-radius: 2rem;
+        box-shadow:
+          0 8px 20px rgba(0, 0, 0, 0.02),
+          0 2px 6px rgba(0, 0, 0, 0.05);
+        border: 1px solid rgba(255, 255, 255, 0.6);
+      }
+      .title-section h1 {
+        font-size: 1.8rem;
+        font-weight: 700;
+        background: linear-gradient(135deg, #1f2b3d, #2c3e66);
+        -webkit-background-clip: text;
+        background-clip: text;
+        color: transparent;
+        letter-spacing: -0.3px;
+      }
+      .title-section p {
+        font-size: 0.85rem;
+        color: #4a5b6e;
+        margin-top: 4px;
+        display: flex;
+        align-items: center;
+        gap: 6px;
+      }
+      .badge-rl {
+        background: #2c3e66;
+        color: white;
+        border-radius: 40px;
+        padding: 4px 12px;
+        font-size: 0.7rem;
+        font-weight: 600;
+      }
+      .refresh-btn {
+        background: white;
+        border: none;
+        padding: 10px 20px;
+        border-radius: 40px;
+        font-weight: 500;
+        display: flex;
+        align-items: center;
+        gap: 8px;
+        cursor: pointer;
+        box-shadow: 0 2px 6px rgba(0, 0, 0, 0.05);
+        transition: 0.2s;
+        font-family: "Inter";
+      }
+      .refresh-btn:hover {
+        background: #f0f3fc;
+        transform: translateY(-1px);
+      }
+
+      /* stats grid */
+      .stats-grid {
+        display: grid;
+        grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+        gap: 1.2rem;
+        margin-bottom: 2rem;
+      }
+      .stat-card {
+        background: white;
+        border-radius: 1.5rem;
+        padding: 1.2rem 1rem;
+        box-shadow:
+          0 4px 12px rgba(0, 0, 0, 0.02),
+          0 1px 2px rgba(0, 0, 0, 0.03);
+        border: 1px solid rgba(0, 0, 0, 0.05);
+        transition: all 0.2s;
+      }
+      .stat-title {
+        font-size: 0.8rem;
+        text-transform: uppercase;
+        letter-spacing: 0.5px;
+        font-weight: 600;
+        color: #5c6f87;
+      }
+      .stat-number {
+        font-size: 2.2rem;
+        font-weight: 800;
+        color: #1e2a3e;
+        line-height: 1.2;
+        margin-top: 8px;
+      }
+      .stat-sub {
+        font-size: 0.7rem;
+        color: #6c7f9b;
+      }
+
+      /* action cards row */
+      .action-row {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 1.5rem;
+        margin-bottom: 2rem;
+      }
+      .card-panel {
+        background: white;
+        border-radius: 1.5rem;
+        padding: 1.4rem 1.6rem;
+        flex: 1;
+        min-width: 260px;
+        box-shadow: 0 8px 20px rgba(0, 0, 0, 0.03);
+        border: 1px solid #eef2f9;
+      }
+      .card-panel h3 {
+        font-size: 1.2rem;
+        font-weight: 600;
+        margin-bottom: 1rem;
+        display: flex;
+        align-items: center;
+        gap: 8px;
+      }
+      .form-group {
+        margin-bottom: 0.9rem;
+      }
+      label {
+        font-size: 0.75rem;
+        font-weight: 600;
+        text-transform: uppercase;
+        color: #4a627a;
+        display: block;
+        margin-bottom: 4px;
+      }
+      input,
+      textarea,
+      select {
+        width: 100%;
+        padding: 10px 12px;
+        border-radius: 14px;
+        border: 1px solid #cfddee;
+        background: #fefefe;
+        font-family: "Inter";
+        font-size: 0.85rem;
+        transition: 0.2s;
+      }
+      input:focus,
+      textarea:focus,
+      select:focus {
+        outline: none;
+        border-color: #3b6ea0;
+        box-shadow: 0 0 0 2px rgba(59, 110, 160, 0.2);
+      }
+      button.primary {
+        background: #1f2f44;
+        color: white;
+        border: none;
+        padding: 10px 16px;
+        border-radius: 40px;
+        font-weight: 500;
+        cursor: pointer;
+        transition: 0.2s;
+        width: 100%;
+        font-size: 0.85rem;
+      }
+      button.primary:hover {
+        background: #2c405b;
+        transform: translateY(-1px);
+      }
+      .filter-bar {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 1rem;
+        align-items: flex-end;
+        margin-bottom: 1.2rem;
+        background: #f8fafd;
+        padding: 1rem;
+        border-radius: 1.2rem;
+      }
+      .filter-group {
+        flex: 1;
+        min-width: 160px;
+      }
+      .filter-group label {
+        font-size: 0.7rem;
+        margin-bottom: 2px;
+      }
+      .reset-filter {
+        background: #eef2ff;
+        border: none;
+        padding: 8px 16px;
+        border-radius: 30px;
+        cursor: pointer;
+        font-weight: 500;
+        font-size: 0.75rem;
+      }
+
+      /* tables */
+      .section-card {
+        background: white;
+        border-radius: 1.5rem;
+        padding: 1.2rem 1.4rem;
+        margin-bottom: 2rem;
+        box-shadow: 0 4px 14px rgba(0, 0, 0, 0.02);
+        border: 1px solid #eef2f9;
+      }
+      .section-header {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        margin-bottom: 1rem;
+        flex-wrap: wrap;
+      }
+      .section-header h2 {
+        font-size: 1.3rem;
+        font-weight: 600;
+      }
+      .table-wrapper {
+        overflow-x: auto;
+        border-radius: 1rem;
+      }
+      table {
+        width: 100%;
+        border-collapse: collapse;
+        font-size: 0.8rem;
+      }
+      th {
+        text-align: left;
+        padding: 12px 8px;
+        background: #f8fafd;
+        font-weight: 600;
+        color: #2c3e50;
+      }
+      td {
+        padding: 10px 8px;
+        border-bottom: 1px solid #edf2f7;
+        vertical-align: middle;
+      }
+      .status-badge {
+        display: inline-block;
+        padding: 4px 10px;
+        border-radius: 40px;
+        font-size: 0.7rem;
+        font-weight: 600;
+        text-align: center;
+      }
+      .status-pending {
+        background: #fef3c7;
+        color: #b45309;
+      }
+      .status-running {
+        background: #e0f2fe;
+        color: #0369a1;
+      }
+      .status-completed {
+        background: #dff9e6;
+        color: #2b6e3c;
+      }
+      .status-failed {
+        background: #ffe4e2;
+        color: #b91c1c;
+      }
+      .status-active {
+        background: #dff9e6;
+        color: #15803d;
+      }
+      .status-dead {
+        background: #f1f3f4;
+        color: #5c5f66;
+      }
+      .badge-sm {
+        background: #eef2ff;
+        border-radius: 30px;
+        padding: 2px 8px;
+        font-size: 0.7rem;
+      }
+      .q-table-preview {
+        background: #f9fbfe;
+        border-radius: 1rem;
+        padding: 0.8rem;
+        font-family: monospace;
+        font-size: 0.7rem;
+      }
+      .flex-between {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+      }
+      .resource-bar {
+        background: #e2e8f0;
+        border-radius: 20px;
+        height: 6px;
+        width: 80px;
+        overflow: hidden;
+      }
+      .resource-fill {
+        background: #2c6e9e;
+        height: 100%;
+        border-radius: 20px;
+      }
+      .toast-msg {
+        position: fixed;
+        bottom: 20px;
+        right: 20px;
+        background: #1e293b;
+        color: white;
+        padding: 12px 20px;
+        border-radius: 40px;
+        font-size: 0.8rem;
+        z-index: 1000;
+        box-shadow: 0 4px 12px rgba(0, 0, 0, 0.2);
+        transition: 0.2s;
+      }
+      @media (max-width: 680px) {
+        body {
+          padding: 1rem;
+        }
+        .stat-number {
+          font-size: 1.6rem;
+        }
+      }
+    </style>
+  </head>
+  <body>
+    <div class="dashboard-container">
+      <div class="header">
+        <div class="title-section">
+          <h1>
+            <i class="fas fa-microchip" style="color: #2c3e66"></i> NeoOrch · RL
+            Scheduler
+          </h1>
+          <p>
+            <span class="badge-rl"
+              ><i class="fas fa-brain"></i> Q-learning agent active</span
+            >
+            <span
+              ><i class="fas fa-project-diagram"></i> distributed task
+              orchestration</span
+            >
+          </p>
+        </div>
+        <button class="refresh-btn" id="manualRefreshBtn">
+          <i class="fas fa-sync-alt"></i> Refresh data
+        </button>
+      </div>
+
+      <!-- stats cards (dynamic) -->
+      <div class="stats-grid" id="statsGrid">
+        <div class="stat-card">
+          <div class="stat-title">TOTAL WORKERS</div>
+          <div class="stat-number" id="statWorkers">—</div>
+          <div class="stat-sub">active / total</div>
+        </div>
+        <div class="stat-card">
+          <div class="stat-title">TASKS</div>
+          <div class="stat-number" id="statTotalTasks">—</div>
+          <div class="stat-sub">pending / running / finished</div>
+        </div>
+        <div class="stat-card">
+          <div class="stat-title">RL SUCCESS RATE</div>
+          <div class="stat-number" id="statSuccessRate">—%</div>
+          <div class="stat-sub">based on history</div>
+        </div>
+        <div class="stat-card">
+          <div class="stat-title">Q-LEARN UPDATES</div>
+          <div class="stat-number" id="statUpdates">—</div>
+          <div class="stat-sub">samples processed</div>
+        </div>
+      </div>
+
+      <!-- action panels -->
+      <div class="action-row">
+        <div class="card-panel">
+          <h3>
+            <i class="fas fa-plus-circle" style="color: #2c6e9e"></i> Submit new
+            task
+          </h3>
+          <div class="form-group">
+            <label>Required CPU cores</label>
+            <input type="number" id="taskCpu" value="2" min="1" step="1" />
+          </div>
+          <div class="form-group">
+            <label>Required RAM (GB)</label>
+            <input type="number" id="taskRam" value="4" min="1" step="1" />
+          </div>
+          <div class="form-group">
+            <label>Priority (0=low, 5=high)</label>
+            <input type="number" id="taskPriority" value="1" min="0" max="5" />
+          </div>
+          <div class="form-group">
+            <label>Data payload (JSON)</label>
+            <textarea id="taskData" rows="2">
+{"demo": "task_data", "type": "inference"}</textarea
+            >
+          </div>
+          <button class="primary" id="submitTaskBtn">
+            <i class="fas fa-tasks"></i> Schedule task
+          </button>
+        </div>
+        <div class="card-panel">
+          <h3><i class="fas fa-server"></i> Register worker</h3>
+          <div class="form-group">
+            <label>CPU cores</label>
+            <input type="number" id="workerCpu" value="8" min="1" />
+          </div>
+          <div class="form-group">
+            <label>RAM (GB)</label>
+            <input type="number" id="workerRam" value="16" min="1" />
+          </div>
+          <button class="primary" id="addWorkerBtn">
+            <i class="fas fa-plug"></i> Add worker node
+          </button>
+        </div>
+        <div class="card-panel">
+          <h3><i class="fas fa-chart-line"></i> RL insights</h3>
+          <div id="rlPreview" class="q-table-preview">
+            Loading Q-table metrics...
+          </div>
+        </div>
+      </div>
+
+      <!-- workers table -->
+      <div class="section-card">
+        <div class="section-header">
+          <h2><i class="fas fa-network-wired"></i> Worker fleet</h2>
+          <span
+            style="
+              font-size: 0.7rem;
+              background: #eef2ff;
+              padding: 4px 12px;
+              border-radius: 30px;
+            "
+            >heartbeat & resource aware</span
+          >
+        </div>
+        <div class="table-wrapper">
+          <table id="workersTable">
+            <thead>
+              <tr>
+                <th>ID (short)</th>
+                <th>CPU tot/avail</th>
+                <th>RAM tot/avail</th>
+                <th>Status</th>
+                <th>Last heartbeat</th>
+                <th>Assigned tasks</th>
+              </tr>
+            </thead>
+            <tbody id="workersTbody">
+              <tr>
+                <td colspan="6" style="text-align: center">
+                  Loading workers...
+                </td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+      </div>
+
+      <!-- tasks table with filter -->
+      <div class="section-card">
+        <div class="section-header">
+          <h2><i class="fas fa-list-ul"></i> Recent tasks (max 50)</h2>
+          <div>
+            <span class="badge-sm"
+              ><i class="fas fa-robot"></i> RL state/action shown if
+              available</span
+            >
+          </div>
+        </div>
+        <!-- filter bar -->
+        <div class="filter-bar">
+          <div class="filter-group">
+            <label><i class="fas fa-filter"></i> Filter by status</label>
+            <select id="taskStatusFilter">
+              <option value="all">All tasks</option>
+              <option value="pending">Pending</option>
+              <option value="running">Running</option>
+              <option value="completed">Completed</option>
+              <option value="failed">Failed</option>
+            </select>
+          </div>
+          <div class="filter-group">
+            <label><i class="fas fa-microchip"></i> Worker ID (short)</label>
+            <input
+              type="text"
+              id="workerIdFilter"
+              placeholder="e.g., a1b2c3 or full ID"
+              autocomplete="off"
+            />
+          </div>
+          <div class="filter-group" style="flex: 0 0 auto">
+            <label>&nbsp;</label>
+            <button class="reset-filter" id="resetFiltersBtn">
+              <i class="fas fa-undo-alt"></i> Reset filters
+            </button>
+          </div>
+        </div>
+        <div class="table-wrapper">
+          <table id="tasksTable" style="min-width: 800px">
+            <thead>
+              <tr>
+                <th>ID</th>
+                <th>Status</th>
+                <th>CPU/RAM req</th>
+                <th>Priority</th>
+                <th>Worker</th>
+                <th>RL state/action</th>
+                <th>Created</th>
+              </tr>
+            </thead>
+            <tbody id="tasksTbody">
+              <tr>
+                <td colspan="7">Loading tasks...</td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+      </div>
+    </div>
+
+    <script>
+      // ========================  CONFIGURATION ========================
+      const API_BASE = "http://localhost:8000"; // backend address
+      const REFRESH_INTERVAL_MS = 5000;
+
+      // Global state for tasks & workers (to apply filters)
+      let globalWorkers = [];
+      let globalTasks = [];
+      let globalRlMetrics = null;
+      let currentTaskFilter = "all";
+      let currentWorkerFilter = "";
+
+      // Helper toasts
+      function showMessage(msg, isError = false) {
+        let toast = document.createElement("div");
+        toast.className = "toast-msg";
+        toast.style.background = isError ? "#b91c1c" : "#1f2f44";
+        toast.innerHTML = `<i class="fas ${isError ? "fa-exclamation-triangle" : "fa-check-circle"}"></i> ${msg}`;
+        document.body.appendChild(toast);
+        setTimeout(() => toast.remove(), 2800);
+      }
+
+      // API wrappers
+      async function apiGet(endpoint) {
+        try {
+          const res = await fetch(`${API_BASE}${endpoint}`);
+          if (!res.ok) throw new Error(`HTTP ${res.status}`);
+          return await res.json();
+        } catch (err) {
+          console.error(`GET ${endpoint} error:`, err);
+          return null;
+        }
+      }
+
+      async function apiPost(endpoint, body) {
+        try {
+          const res = await fetch(`${API_BASE}${endpoint}`, {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify(body),
+          });
+          if (!res.ok) {
+            const errText = await res.text();
+            throw new Error(errText || `status ${res.status}`);
+          }
+          return await res.json();
+        } catch (err) {
+          console.error(`POST ${endpoint} error:`, err);
+          throw err;
+        }
+      }
+
+      // -------------------  DATA FETCH & RENDER -------------------
+      async function fetchAllData() {
+        try {
+          const [workers, tasks, rlMetrics] = await Promise.all([
+            apiGet("/workers/get_workers"),
+            apiGet("/tasks/all_tasks"),
+            apiGet("/learning/metrics/rl"),
+          ]);
+          return {
+            workers: workers || [],
+            tasks: tasks || [],
+            rlMetrics: rlMetrics || null,
+          };
+        } catch (e) {
+          showMessage(
+            "Backend unreachable, check if orchestrator is running on port 8000",
+            true,
+          );
+          return { workers: [], tasks: [], rlMetrics: null };
+        }
+      }
+
+      // compute stats from workers & tasks
+      function updateStats(workers, tasks, rlMetrics) {
+        const totalWorkers = workers.length;
+        const activeWorkers = workers.filter(
+          (w) => w.status === "active",
+        ).length;
+        const totalTasks = tasks.length;
+        const pendingTasks = tasks.filter((t) => t.status === "pending").length;
+        const runningTasks = tasks.filter((t) => t.status === "running").length;
+        document.getElementById("statWorkers").innerHTML =
+          `${activeWorkers}<span style="font-size:0.9rem;">/${totalWorkers}</span>`;
+        document.getElementById("statTotalTasks").innerHTML =
+          `${totalTasks}<span style="font-size:0.9rem;">  |  p:${pendingTasks} r:${runningTasks}</span>`;
+        if (rlMetrics && rlMetrics.success_rate !== undefined) {
+          let successPercent = (rlMetrics.success_rate * 100).toFixed(1);
+          document.getElementById("statSuccessRate").innerHTML =
+            `${successPercent}%`;
+          document.getElementById("statUpdates").innerHTML =
+            rlMetrics.total_updates || 0;
+        } else {
+          document.getElementById("statSuccessRate").innerHTML = "—";
+          document.getElementById("statUpdates").innerHTML = "0";
+        }
+      }
+
+      // Compute assigned task count per worker by scanning tasks
+      function computeAssignedTasksCount(workers, tasks) {
+        const assignedMap = new Map();
+        workers.forEach((w) => assignedMap.set(w.id, 0));
+        tasks.forEach((task) => {
+          if (task.assigned_worker && assignedMap.has(task.assigned_worker)) {
+            assignedMap.set(
+              task.assigned_worker,
+              assignedMap.get(task.assigned_worker) + 1,
+            );
+          }
+        });
+        return assignedMap;
+      }
+
+      function renderWorkers(workers, tasks) {
+        const tbody = document.getElementById("workersTbody");
+        if (!workers.length) {
+          tbody.innerHTML =
+            '<tr><td colspan="6" style="text-align:center;">✨ No workers registered. Add one using the panel.</td></tr>';
+          return;
+        }
+        const assignedCounts = computeAssignedTasksCount(workers, tasks);
+        tbody.innerHTML = workers
+          .map((w) => {
+            const cpuUsed = w.cpu_cores - w.available_cpu;
+            const cpuPercent = (cpuUsed / w.cpu_cores) * 100;
+            const ramUsed = w.ram - w.available_ram;
+            const ramPercent = (ramUsed / w.ram) * 100;
+            const lastHb = w.last_heartbeat
+              ? new Date(w.last_heartbeat).toLocaleTimeString()
+              : "never";
+            const shortId = w.id.slice(-6);
+            const statusClass =
+              w.status === "active" ? "status-active" : "status-dead";
+            const assignedCount = assignedCounts.get(w.id) || 0;
+            return `<tr>
+        <td><code>${shortId}</code><br><span style="font-size:0.65rem;">${w.id.slice(0, 8)}...</span></td>
+        <td>${w.cpu_cores} / ${w.available_cpu}<div class="resource-bar"><div class="resource-fill" style="width:${cpuPercent}%; background:#3b6ea0;"></div></div></td>
+        <td>${w.ram}GB / ${w.available_ram}GB<div class="resource-bar"><div class="resource-fill" style="width:${ramPercent}%;"></div></div></td>
+        <td><span class="status-badge ${statusClass}">${w.status}</span></td>
+        <td>${lastHb}</td>
+        <td><strong>${assignedCount}</strong> task${assignedCount !== 1 ? "s" : ""}</td>
+      </tr>`;
+          })
+          .join("");
+      }
+
+      // Filter tasks based on status and workerId filter
+      function getFilteredTasks(tasks, workers) {
+        let filtered = [...tasks];
+        if (currentTaskFilter !== "all") {
+          filtered = filtered.filter((t) => t.status === currentTaskFilter);
+        }
+        if (currentWorkerFilter.trim() !== "") {
+          const filterLower = currentWorkerFilter.trim().toLowerCase();
+          filtered = filtered.filter((t) => {
+            if (!t.assigned_worker) return false;
+            // match short id (last 6 chars) or full id contains filter
+            const shortId = t.assigned_worker.slice(-6).toLowerCase();
+            const fullId = t.assigned_worker.toLowerCase();
+            return (
+              shortId.includes(filterLower) || fullId.includes(filterLower)
+            );
+          });
+        }
+        return filtered;
+      }
+
+      function renderTasks(tasks, workers) {
+        const tbody = document.getElementById("tasksTbody");
+        if (!tasks.length) {
+          tbody.innerHTML =
+            '<tr><td colspan="7">📭 No tasks. Submit a task to see scheduling in action.</td></tr>';
+          return;
+        }
+        const filtered = getFilteredTasks(tasks, workers);
+        if (filtered.length === 0) {
+          tbody.innerHTML =
+            '<tr><td colspan="7">🔍 No tasks match the current filters.</td></tr>';
+          return;
+        }
+        const sorted = [...filtered]
+          .sort((a, b) => new Date(b.created_at) - new Date(a.created_at))
+          .slice(0, 50);
+        tbody.innerHTML = sorted
+          .map((t) => {
+            let statusClass = "";
+            if (t.status === "pending") statusClass = "status-pending";
+            else if (t.status === "running") statusClass = "status-running";
+            else if (t.status === "completed") statusClass = "status-completed";
+            else if (t.status === "failed") statusClass = "status-failed";
+            else statusClass = "status-pending";
+            const workerShort = t.assigned_worker
+              ? t.assigned_worker.slice(-6)
+              : "—";
+            let rlInfo = "—";
+            if (t.rl_state) {
+              const actionLabel =
+                t.rl_action_taken === 0 ? "priority" : "duration";
+              rlInfo = `<span title="state: ${t.rl_state}"><i class="fas fa-chart-simple"></i> ${actionLabel}</span>`;
+            }
+            const createdAt = new Date(t.created_at).toLocaleString();
+            return `<tr>
+        <td><code>${t.id.slice(-8)}</code></td>
+        <td><span class="status-badge ${statusClass}">${t.status}</span></td>
+        <td>${t.required_cpu} vCPU / ${t.required_ram} GB</td>
+        <td>${t.priority}</td>
+        <td>${workerShort !== "—" ? `<i class="fas fa-microchip"></i> ${workerShort}` : "unassigned"}</td>
+        <td>${rlInfo}</td>
+        <td style="font-size:0.7rem;">${createdAt}</td>
+      </tr>`;
+          })
+          .join("");
+      }
+
+      function renderRLMetrics(rlData) {
+        const container = document.getElementById("rlPreview");
+        if (!rlData || !rlData.q_table_sample) {
+          container.innerHTML =
+            '<i class="fas fa-database"></i> No Q-table samples yet. Tasks history will build RL knowledge.';
+          return;
+        }
+        const samples = rlData.q_table_sample;
+        if (!samples.length) {
+          container.innerHTML =
+            "⚡ Q-table is initializing (wait for task completions)";
+          return;
+        }
+        let html = `<div style="font-weight:600; margin-bottom:8px;"><i class="fas fa-chart-simple"></i> Top state-action values</div>`;
+        html += `<div style="display:flex; flex-direction:column; gap:8px;">`;
+        samples.slice(0, 4).forEach((s) => {
+          const q0 = s.q_values[0].toFixed(2);
+          const q1 = s.q_values[1].toFixed(2);
+          html += `<div style="background:#f1f5f9; padding:8px; border-radius:14px;">
+        <div style="font-family:monospace; font-size:0.7rem;">🏷️ state: ${s.state}</div>
+        <div class="flex-between"><span>⚖️ priority weight: ${q0}</span> <span>⏱️ duration weight: ${q1}</span></div>
+        <div style="font-size:0.65rem; color:#3b6ea0;">Δ diff: ${s.diff.toFixed(3)}</div>
+      </div>`;
+        });
+        html += `</div>`;
+        if (rlData.success_rate)
+          html += `<div style="margin-top:12px; font-size:0.7rem;">✅ global success rate: ${(rlData.success_rate * 100).toFixed(1)}%</div>`;
+        container.innerHTML = html;
+      }
+
+      // main render that uses global data and reapplies filters
+      function refreshUIContent() {
+        if (!globalWorkers && !globalTasks) return;
+        updateStats(globalWorkers, globalTasks, globalRlMetrics);
+        renderWorkers(globalWorkers, globalTasks);
+        renderTasks(globalTasks, globalWorkers);
+        renderRLMetrics(globalRlMetrics);
+      }
+
+      // fetch fresh data and update global state, then refresh UI
+      let isLoading = false;
+      async function refreshDashboard() {
+        if (isLoading) return;
+        isLoading = true;
+        try {
+          const { workers, tasks, rlMetrics } = await fetchAllData();
+          globalWorkers = workers;
+          globalTasks = tasks;
+          globalRlMetrics = rlMetrics;
+          refreshUIContent();
+        } catch (err) {
+          console.warn(err);
+        } finally {
+          isLoading = false;
+        }
+      }
+
+      // -------- actions (submit task, add worker) --------
+      async function submitTask() {
+        const cpu = parseInt(document.getElementById("taskCpu").value);
+        const ram = parseInt(document.getElementById("taskRam").value);
+        const priority = parseInt(
+          document.getElementById("taskPriority").value,
+        );
+        let dataRaw = document.getElementById("taskData").value;
+        let dataObj = {};
+        try {
+          dataObj = JSON.parse(dataRaw);
+        } catch (e) {
+          showMessage("Invalid JSON payload, using default", true);
+          dataObj = { demo: "fallback", message: "task from dashboard" };
+        }
+        if (isNaN(cpu) || isNaN(ram) || cpu < 1 || ram < 1) {
+          showMessage("CPU / RAM must be positive integers", true);
+          return;
+        }
+        try {
+          const response = await apiPost("/tasks/submit", {
+            required_cpu: cpu,
+            required_ram: ram,
+            priority: priority,
+            data: dataObj,
+          });
+          showMessage(
+            `✅ Task ${response.id.slice(-8)} submitted (${cpu}CPU / ${ram}GB)`,
+          );
+          refreshDashboard();
+        } catch (err) {
+          showMessage(`Task submit failed: ${err.message}`, true);
+        }
+      }
+
+      async function addWorker() {
+        let cpu = parseInt(document.getElementById("workerCpu").value);
+        let ram = parseInt(document.getElementById("workerRam").value);
+        if (isNaN(cpu) || isNaN(ram) || cpu < 1 || ram < 1) {
+          showMessage("Worker CPU/RAM must be >=1", true);
+          return;
+        }
+        try {
+          const res = await apiPost("/workers/add_worker", {
+            cpu_cores: cpu,
+            ram: ram,
+          });
+          showMessage(
+            `🚀 Worker registered: ${res.id.slice(-8)} (${cpu} cores, ${ram}GB RAM)`,
+          );
+          refreshDashboard();
+        } catch (err) {
+          showMessage(`Worker registration error: ${err.message}`, true);
+        }
+      }
+
+      // filter event handlers
+      function applyFilters() {
+        currentTaskFilter = document.getElementById("taskStatusFilter").value;
+        currentWorkerFilter = document.getElementById("workerIdFilter").value;
+        renderTasks(globalTasks, globalWorkers);
+      }
+
+      function resetFilters() {
+        document.getElementById("taskStatusFilter").value = "all";
+        document.getElementById("workerIdFilter").value = "";
+        currentTaskFilter = "all";
+        currentWorkerFilter = "";
+        renderTasks(globalTasks, globalWorkers);
+        showMessage("Filters reset");
+      }
+
+      // auto refresh
+      let intervalId = null;
+      function startAutoRefresh() {
+        if (intervalId) clearInterval(intervalId);
+        intervalId = setInterval(() => refreshDashboard(), REFRESH_INTERVAL_MS);
+      }
+
+      // initial load
+      window.addEventListener("DOMContentLoaded", async () => {
+        await refreshDashboard();
+        startAutoRefresh();
+        document
+          .getElementById("submitTaskBtn")
+          .addEventListener("click", submitTask);
+        document
+          .getElementById("addWorkerBtn")
+          .addEventListener("click", addWorker);
+        document
+          .getElementById("manualRefreshBtn")
+          .addEventListener("click", () => {
+            refreshDashboard();
+            showMessage("Refreshing dashboard...");
+          });
+        // filter listeners
+        document
+          .getElementById("taskStatusFilter")
+          .addEventListener("change", applyFilters);
+        document
+          .getElementById("workerIdFilter")
+          .addEventListener("input", applyFilters);
+        document
+          .getElementById("resetFiltersBtn")
+          .addEventListener("click", resetFilters);
+        // warm about backend
+        setTimeout(() => {
+          if (
+            globalWorkers.length === 0 &&
+            document
+              .getElementById("workersTbody")
+              .innerHTML.includes("Loading workers")
+          ) {
+            showMessage(
+              "⚠️ Backend not reachable at localhost:8000. Make sure orchestrator is running.",
+              true,
+            );
+          }
+        }, 1500);
+      });
+    </script>
+  </body>
+</html>
