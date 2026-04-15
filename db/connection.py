@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import os
 import logging
 import random
 import threading
@@ -41,7 +42,7 @@ _INDEXES_READY = False
 
 
 # Hard-coded standalone URI to prevent any replica-set misconfiguration.
-_STANDALONE_URI = "mongodb://127.0.0.1:27017"
+_STANDALONE_URI = os.getenv("MONGO_URI", "mongodb://mongodb:27017/")
 
 
 def _build_client() -> MongoClient:

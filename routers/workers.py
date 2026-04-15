@@ -113,7 +113,7 @@ async def add_worker(request: Request, worker: WorkerCreate):
             {"$set": {"worker_id": worker_id}},
         )
 
-        if worker.simulate:
+        if worker.simulate and os.getenv("DISABLE_WORKER_SPAWN") != "true":
             try:
                 process = _spawn_worker_subprocess(worker_id)
                 workers_collection.update_one(
