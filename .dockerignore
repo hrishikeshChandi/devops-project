@@ -1,0 +1,13 @@
+.venv
+__pycache__
+*.pyc
+.git
+.github
+*.md
+diagrams
+all_python_code.txt
+copy-file-content.sh
+uv.lock
+.python-version
+.env
+*.log
