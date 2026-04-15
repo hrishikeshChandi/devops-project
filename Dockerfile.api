@@ -1,0 +1,32 @@
+FROM python:3.12-slim
+
+WORKDIR /app
+
+# Install system deps
+RUN apt-get update && apt-get install -y --no-install-recommends \
+    curl gcc \
+    && rm -rf /var/lib/apt/lists/*
+
+# Install uv
+RUN pip install uv
+
+# Copy only pyproject (no uv.lock)
+COPY pyproject.toml .
+
+# Install dependencies
+RUN uv sync
+
+# Copy rest of code
+COPY . .
+
+# Disable subprocess workers
+ENV DISABLE_WORKER_SPAWN=true
+
+# Create data directory
+RUN mkdir -p /app/backend/data
+
+# Expose port
+EXPOSE 8000
+
+# Run app
+CMD ["uv", "run", "uvicorn", "main:app", "--host", "0.0.0.0", "--port", "8000"]
