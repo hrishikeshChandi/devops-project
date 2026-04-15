@@ -126,26 +126,43 @@ def _claim_next_task(
     available_ram: int,
 ) -> dict | None:
     # Atomic claim: one task can only transition from pending -> running once.
-    return task_collection.find_one_and_update(
-        {
-            "status": "pending",
-            "required_cpu": {"$lte": available_cpu},
-            "required_ram": {"$lte": available_ram},
-        },
-        [
-            {
-                "$set": {
-                    "status": "running",
-                    "worker_id": worker_id,
-                    "assigned_worker": worker_id,
-                    "started_at": now,
-                    "updated_at": now,
-                    "allocated_cpu": "$required_cpu",
-                    "allocated_ram": "$required_ram",
-                }
-            }
+    # Only claim tasks that this worker can satisfy (prevents thrashing)
+    # Also avoid tasks currently in a short cooldown window after recent failed assignments.
+    query = {
+        "status": "pending",
+        "required_cpu": {"$lte": available_cpu},
+        "required_ram": {"$lte": available_ram},
+        "$or": [
+            {"claim_cooldown_until": {"$exists": False}},
+            {"claim_cooldown_until": {"$lte": now}},
         ],
-        sort=[("priority", -1), ("created_at", 1)],
+    }
+
+    update_pipeline = [
+        {
+            "$set": {
+                "status": "running",
+                "worker_id": worker_id,
+                "assigned_worker": worker_id,
+                "started_at": now,
+                "updated_at": now,
+                "allocated_cpu": "$required_cpu",
+                "allocated_ram": "$required_ram",
+                # helpful for debugging/metrics
+                "last_claimed_by": worker_id,
+            }
+        }
+    ]
+
+    return task_collection.find_one_and_update(
+        query,
+        update_pipeline,
+        sort=[
+            ("priority", -1),
+            ("required_cpu", -1),
+            ("required_ram", -1),
+            ("created_at", 1),
+        ],
         return_document=ReturnDocument.AFTER,
     )
 
@@ -178,6 +195,12 @@ def _reserve_worker_resources(
 
 def _revert_claimed_task(task_obj_id: ObjectId, worker_id: str, now: datetime) -> None:
     try:
+        # When reverting a claim, put the task into a short cooldown and increment
+        # a failed assignment counter to reduce immediate re-claiming by other
+        # incapable workers.
+        cooldown_seconds = 1
+        claim_cooldown_until = now + timedelta(seconds=cooldown_seconds)
+
         task_collection.update_one(
             {
                 "_id": task_obj_id,
@@ -193,7 +216,9 @@ def _revert_claimed_task(task_obj_id: ObjectId, worker_id: str, now: datetime) -
                     "updated_at": now,
                     "allocated_cpu": 0,
                     "allocated_ram": 0,
-                }
+                    "claim_cooldown_until": claim_cooldown_until,
+                },
+                "$inc": {"failed_assignment_attempts": 1},
             },
         )
     except PyMongoError as exc:
@@ -270,6 +295,13 @@ def _assign_tasks_non_transactional(
             )
             if not task:
                 return assigned_tasks
+
+            required_cpu = int(task.get("required_cpu", 0))
+            required_ram = int(task.get("required_ram", 0))
+
+            if required_cpu > available_cpu or required_ram > available_ram:
+                _revert_claimed_task(task["_id"], worker_id, now)
+                continue
 
             required_cpu = max(0, int(task.get("required_cpu", 0)))
             required_ram = max(0, int(task.get("required_ram", 0)))
@@ -425,10 +457,17 @@ async def get_all_tasks(request: Request):
 )
 async def submit_task(request: Request, inputTask: TaskCreate):
     try:
+        # capable_worker = workers_collection.find_one(
+        #     {
+        #         "cpu_cores": {"$gte": inputTask.required_cpu},
+        #         "ram": {"$gte": inputTask.required_ram},
+        #     }
+        # )
         capable_worker = workers_collection.find_one(
             {
-                "cpu_cores": {"$gte": inputTask.required_cpu},
-                "ram": {"$gte": inputTask.required_ram},
+                "available_cpu": {"$gte": inputTask.required_cpu},
+                "available_ram": {"$gte": inputTask.required_ram},
+                "status": "active",
             }
         )
         if not capable_worker:
@@ -557,7 +596,9 @@ def _finalize_task_non_transactional(
             {
                 "$set": {
                     "worker_id": None,
-                    "assigned_worker": None,
+                    "completed_by": worker_id,  # ✅ ADD THIS
+                    # REMOVE THIS LINE ↓
+                    # "assigned_worker": None,
                     "allocated_cpu": 0,
                     "allocated_ram": 0,
                     "updated_at": now,

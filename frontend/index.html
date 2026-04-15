@@ -537,7 +537,7 @@
                 <th>Status</th>
                 <th>CPU/RAM req</th>
                 <th>Priority</th>
-                <th>Worker</th>
+                <th>Worker (assigned / completed)</th>
                 <th>RL state/action</th>
                 <th>Created</th>
               </tr>
@@ -744,9 +744,23 @@
             else if (t.status === "completed") statusClass = "status-completed";
             else if (t.status === "failed") statusClass = "status-failed";
             else statusClass = "status-pending";
-            const workerShort = t.assigned_worker
-              ? t.assigned_worker.slice(-6)
-              : "—";
+
+            // const workerShort = t.assigned_worker
+            //   ? t.assigned_worker.slice(-6)
+            //   : "—";
+
+            let workerDisplay = "—";
+
+            // running → show assigned worker
+            if (t.status === "running" && t.assigned_worker) {
+              workerDisplay = t.assigned_worker.slice(-6);
+            }
+
+            // completed → show completed_by (new field)
+            else if (t.status === "completed" && t.completed_by) {
+              workerDisplay = "✔ " + t.completed_by.slice(-6);
+            }
+
             let rlInfo = "—";
             if (t.rl_state) {
               const actionLabel =
@@ -759,7 +773,13 @@
         <td><span class="status-badge ${statusClass}">${t.status}</span></td>
         <td>${t.required_cpu} vCPU / ${t.required_ram} GB</td>
         <td>${t.priority}</td>
-        <td>${workerShort !== "—" ? `<i class="fas fa-microchip"></i> ${workerShort}` : "unassigned"}</td>
+        <td>
+  ${
+    workerDisplay !== "—"
+      ? `<i class="fas fa-microchip"></i> ${workerDisplay}`
+      : "—"
+  }
+</td>
         <td>${rlInfo}</td>
         <td style="font-size:0.7rem;">${createdAt}</td>
       </tr>`;

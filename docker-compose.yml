@@ -1,0 +1,97 @@
+version: "3.8"
+
+services:
+  mongodb:
+    image: mongo:7
+    container_name: orchestrator-mongodb
+    restart: unless-stopped
+    ports:
+      - "27017:27017"
+    volumes:
+      - mongodb_data:/data/db
+    networks:
+      - orchestrator-net
+
+  api:
+    build:
+      context: .
+      dockerfile: Dockerfile.api
+    container_name: orchestrator-api
+    restart: unless-stopped
+    ports:
+      - "8000:8000"
+    environment:
+      - MONGO_URI=mongodb://mongodb:27017/
+      - HOST=0.0.0.0
+      - PORT=8000
+      - RL_ENABLED=true
+      - DISABLE_WORKER_SPAWN=true
+    depends_on:
+      - mongodb
+    networks:
+      - orchestrator-net
+
+  worker:
+    build:
+      context: .
+      dockerfile: Dockerfile.worker
+    restart: unless-stopped
+    environment:
+      - MONGO_URI=mongodb://mongodb:27017/
+      - HOST=api
+      - PORT=8000
+    depends_on:
+      - api
+      - mongodb
+    networks:
+      - orchestrator-net
+
+  recovery:
+    build:
+      context: .
+      dockerfile: Dockerfile.recovery
+    restart: unless-stopped
+    environment:
+      - MONGO_URI=mongodb://mongodb:27017/
+      - HOST=api
+      - PORT=8000
+    depends_on:
+      - api
+      - mongodb
+    networks:
+      - orchestrator-net
+
+  heartbeat:
+    build:
+      context: .
+      dockerfile: Dockerfile.heartbeat
+    restart: unless-stopped
+    environment:
+      - MONGO_URI=mongodb://mongodb:27017/
+      - HOST=api
+      - PORT=8000
+    depends_on:
+      - api
+      - mongodb
+    networks:
+      - orchestrator-net
+
+  frontend:
+    build:
+      context: .
+      dockerfile: Dockerfile.frontend
+    container_name: orchestrator-frontend
+    restart: unless-stopped
+    ports:
+      - "80:80"
+    depends_on:
+      - api
+    networks:
+      - orchestrator-net
+
+networks:
+  orchestrator-net:
+    driver: bridge
+
+volumes:
+  mongodb_data:

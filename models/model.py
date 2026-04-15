@@ -76,6 +76,8 @@ class Task(BaseModel):
     rl_action_taken: Optional[int] = None
     rl_outcome: Optional[Dict] = None
 
+    completed_by: Optional[str] = None
+
 
 class TaskResponse(BaseModel):
     id: str
@@ -96,3 +98,5 @@ class TaskResponse(BaseModel):
     rl_state: Optional[str] = None
     rl_action_taken: Optional[int] = None
     rl_outcome: Optional[Dict] = None
+
+    completed_by: Optional[str] = None
