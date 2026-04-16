@@ -16,6 +16,8 @@ from models.model import StatusUpdate, Task, TaskCreate, TaskResponse
 from scheduling.estimator import DurationEstimator
 from scheduling.rl_agent import QLearningAgent
 
+from main import tasks_submitted_total, tasks_failed_total, tasks_completed_total
+
 router = APIRouter()
 estimator = DurationEstimator()
 _agent_lock = threading.Lock()
@@ -378,6 +380,7 @@ async def get_task(request: Request, worker_id: str):
 
     now = datetime.now(timezone.utc)
     if not _is_worker_fresh(worker_snapshot, now):
+
         try:
             _mark_worker_dead_if_stale(worker_obj_id, now)
         except PyMongoError:
@@ -450,6 +453,61 @@ async def get_all_tasks(request: Request):
         )
 
 
+# @router.post(
+#     "/submit",
+#     response_model=TaskResponse,
+#     status_code=status.HTTP_201_CREATED,
+# )
+# async def submit_task(request: Request, inputTask: TaskCreate):
+#     try:
+#         # capable_worker = workers_collection.find_one(
+#         #     {
+#         #         "cpu_cores": {"$gte": inputTask.required_cpu},
+#         #         "ram": {"$gte": inputTask.required_ram},
+#         #     }
+#         # )
+#         capable_worker = workers_collection.find_one(
+#             {
+#                 "available_cpu": {"$gte": inputTask.required_cpu},
+#                 "available_ram": {"$gte": inputTask.required_ram},
+#                 "status": "active",
+#             }
+#         )
+#         if not capable_worker:
+#             raise HTTPException(
+#                 status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
+#                 detail=(
+#                     f"No worker exists with at least {inputTask.required_cpu} CPU "
+#                     f"and {inputTask.required_ram} RAM. Task would never be scheduled."
+#                 ),
+#             )
+
+#         task = Task(
+#             data=inputTask.data,
+#             required_cpu=inputTask.required_cpu,
+#             required_ram=inputTask.required_ram,
+#             priority=inputTask.priority,
+#         )
+#         result = task_collection.insert_one(task.model_dump())
+#         return TaskResponse(
+#             id=str(result.inserted_id),
+#             **task.model_dump(),
+#         )
+#     except HTTPException:
+#         raise
+#     except PyMongoError as exc:
+#         LOGGER.warning("MongoDB unavailable while submitting task: %s", exc)
+#         raise HTTPException(
+#             status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
+#             detail="Database unavailable",
+#         )
+#     except Exception as exc:
+#         raise HTTPException(
+#             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+#             detail=f"Error submitting task ({str(exc)})",
+#         )
+
+
 @router.post(
     "/submit",
     response_model=TaskResponse,
@@ -457,12 +515,6 @@ async def get_all_tasks(request: Request):
 )
 async def submit_task(request: Request, inputTask: TaskCreate):
     try:
-        # capable_worker = workers_collection.find_one(
-        #     {
-        #         "cpu_cores": {"$gte": inputTask.required_cpu},
-        #         "ram": {"$gte": inputTask.required_ram},
-        #     }
-        # )
         capable_worker = workers_collection.find_one(
             {
                 "available_cpu": {"$gte": inputTask.required_cpu},
@@ -470,6 +522,7 @@ async def submit_task(request: Request, inputTask: TaskCreate):
                 "status": "active",
             }
         )
+
         if not capable_worker:
             raise HTTPException(
                 status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
@@ -485,20 +538,36 @@ async def submit_task(request: Request, inputTask: TaskCreate):
             required_ram=inputTask.required_ram,
             priority=inputTask.priority,
         )
+
         result = task_collection.insert_one(task.model_dump())
+
+        # ✅ PROMETHEUS — TASK SUBMITTED
+        tasks_submitted_total.inc()
+
         return TaskResponse(
             id=str(result.inserted_id),
             **task.model_dump(),
         )
+
     except HTTPException:
         raise
+
     except PyMongoError as exc:
         LOGGER.warning("MongoDB unavailable while submitting task: %s", exc)
+
+        # ✅ PROMETHEUS — FAILED
+        tasks_failed_total.inc()
+
         raise HTTPException(
             status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
             detail="Database unavailable",
         )
+
     except Exception as exc:
+
+        # ✅ PROMETHEUS — FAILED
+        tasks_failed_total.inc()
+
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
             detail=f"Error submitting task ({str(exc)})",
@@ -615,6 +684,71 @@ def _finalize_task_non_transactional(
     )
 
 
+# @router.put(
+#     "/update_status/{task_id}",
+#     response_model=TaskResponse,
+#     status_code=status.HTTP_200_OK,
+# )
+# async def update_task(request: Request, task_id: str, update: StatusUpdate):
+#     final_status = update.status.lower()
+#     if final_status not in ["completed", "failed"]:
+#         raise HTTPException(
+#             status_code=status.HTTP_400_BAD_REQUEST,
+#             detail="Only 'completed' or 'failed' are allowed",
+#         )
+
+#     try:
+#         task_obj_id = ObjectId(task_id)
+#     except Exception:
+#         raise HTTPException(
+#             status_code=status.HTTP_400_BAD_REQUEST,
+#             detail="Invalid task id",
+#         )
+
+#     for attempt in range(1, MAX_COMPLETION_RETRIES + 1):
+#         try:
+#             updated_task = _finalize_task_non_transactional(
+#                 task_obj_id=task_obj_id,
+#                 task_id=task_id,
+#                 final_status=final_status,
+#             )
+#             return _task_to_response(updated_task)
+#         except HTTPException:
+#             raise
+#         except ConnectionFailure as exc:
+#             if attempt < MAX_COMPLETION_RETRIES:
+#                 LOGGER.warning(
+#                     "Task finalization retry for %s after connection failure: %s",
+#                     task_id,
+#                     exc,
+#                 )
+#                 time.sleep(_retry_delay(attempt))
+#                 continue
+#             raise HTTPException(
+#                 status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
+#                 detail="Database unavailable",
+#             )
+#         except PyMongoError as exc:
+#             if attempt < MAX_COMPLETION_RETRIES:
+#                 LOGGER.warning(
+#                     "Task finalization retry for %s after DB error: %s",
+#                     task_id,
+#                     exc,
+#                 )
+#                 time.sleep(_retry_delay(attempt))
+#                 continue
+#             LOGGER.exception("Task finalization failed for %s: %s", task_id, exc)
+#             raise HTTPException(
+#                 status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
+#                 detail="Database unavailable",
+#             )
+
+#     raise HTTPException(
+#         status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+#         detail="Failed to update task status",
+#     )
+
+
 @router.put(
     "/update_status/{task_id}",
     response_model=TaskResponse,
@@ -622,6 +756,7 @@ def _finalize_task_non_transactional(
 )
 async def update_task(request: Request, task_id: str, update: StatusUpdate):
     final_status = update.status.lower()
+
     if final_status not in ["completed", "failed"]:
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST,
@@ -643,9 +778,20 @@ async def update_task(request: Request, task_id: str, update: StatusUpdate):
                 task_id=task_id,
                 final_status=final_status,
             )
+
+            # ✅ PROMETHEUS COUNTERS
+            previous_status = updated_task.get("status")
+
+            if previous_status == "completed":
+                tasks_completed_total.inc()
+            elif previous_status == "failed":
+                tasks_failed_total.inc()
+
             return _task_to_response(updated_task)
+
         except HTTPException:
             raise
+
         except ConnectionFailure as exc:
             if attempt < MAX_COMPLETION_RETRIES:
                 LOGGER.warning(
@@ -659,6 +805,7 @@ async def update_task(request: Request, task_id: str, update: StatusUpdate):
                 status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
                 detail="Database unavailable",
             )
+
         except PyMongoError as exc:
             if attempt < MAX_COMPLETION_RETRIES:
                 LOGGER.warning(
@@ -668,7 +815,12 @@ async def update_task(request: Request, task_id: str, update: StatusUpdate):
                 )
                 time.sleep(_retry_delay(attempt))
                 continue
+
             LOGGER.exception("Task finalization failed for %s: %s", task_id, exc)
+
+            # ✅ PROMETHEUS — FAILED
+            tasks_failed_total.inc()
+
             raise HTTPException(
                 status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
                 detail="Database unavailable",
