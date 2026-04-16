@@ -16,7 +16,11 @@ from models.model import StatusUpdate, Task, TaskCreate, TaskResponse
 from scheduling.estimator import DurationEstimator
 from scheduling.rl_agent import QLearningAgent
 
-from main import tasks_submitted_total, tasks_failed_total, tasks_completed_total
+from core.metrics import (
+    tasks_submitted_total,
+    tasks_completed_total,
+    tasks_failed_total,
+)
 
 router = APIRouter()
 estimator = DurationEstimator()
@@ -779,12 +783,15 @@ async def update_task(request: Request, task_id: str, update: StatusUpdate):
                 final_status=final_status,
             )
 
-            # ✅ PROMETHEUS COUNTERS
-            previous_status = updated_task.get("status")
+            # previous_status = updated_task.get("status")
 
-            if previous_status == "completed":
+            # if previous_status == "completed":
+            #     tasks_completed_total.inc()
+            # elif previous_status == "failed":
+            #     tasks_failed_total.inc()
+            if final_status == "completed":
                 tasks_completed_total.inc()
-            elif previous_status == "failed":
+            elif final_status == "failed":
                 tasks_failed_total.inc()
 
             return _task_to_response(updated_task)

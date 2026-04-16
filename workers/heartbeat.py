@@ -10,7 +10,20 @@ from datetime import datetime, timezone
 from db.connection import workers_collection, task_collection
 from config.constants import MAX_RETRIES, HEARTBEAT_TIMEOUT
 from pymongo.errors import PyMongoError
+
 import logging
+from pythonjsonlogger import jsonlogger
+
+logger = logging.getLogger(__name__)
+
+if not logger.handlers:
+    handler = logging.StreamHandler()
+    handler.setFormatter(
+        jsonlogger.JsonFormatter("%(asctime)s %(name)s %(levelname)s %(message)s")
+    )
+    logger.addHandler(handler)
+
+logger.setLevel(logging.INFO)
 
 LOGGER = logging.getLogger("heartbeat-monitor")
 

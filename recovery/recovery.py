@@ -1,3 +1,4 @@
+import logging
 import sys
 import os
 
@@ -10,7 +11,20 @@ from bson import ObjectId
 from db.connection import task_collection, workers_collection
 from config.constants import TIMEOUT, MAX_RETRIES
 from pymongo.errors import PyMongoError
+
 import logging
+from pythonjsonlogger import jsonlogger
+
+logger = logging.getLogger(__name__)
+
+if not logger.handlers:
+    handler = logging.StreamHandler()
+    handler.setFormatter(
+        jsonlogger.JsonFormatter("%(asctime)s %(name)s %(levelname)s %(message)s")
+    )
+    logger.addHandler(handler)
+
+logger.setLevel(logging.INFO)
 
 LOGGER = logging.getLogger("recovery-daemon")
 

@@ -6,23 +6,30 @@ import sys
 import threading
 import time
 from typing import Optional
-
 import requests
 
 sys.path.append(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 
 from config.constants import HEARTBEAT_INTERVAL, HOST, PORT
+import logging
+from pythonjsonlogger import jsonlogger
+
+logger = logging.getLogger(__name__)
+
+if not logger.handlers:
+    handler = logging.StreamHandler()
+    handler.setFormatter(
+        jsonlogger.JsonFormatter("%(asctime)s %(name)s %(levelname)s %(message)s")
+    )
+    logger.addHandler(handler)
+
+logger.setLevel(logging.INFO)
 
 TASK_URL = f"http://{HOST}:{PORT}/tasks"
 WORKER_URL = f"http://{HOST}:{PORT}/workers"
 LEARNING_URL = f"http://{HOST}:{PORT}/learning/update"
 
 LOGGER = logging.getLogger("worker-runtime")
-if not LOGGER.handlers:
-    logging.basicConfig(
-        level=logging.INFO,
-        format="%(asctime)s %(levelname)s %(name)s %(message)s",
-    )
 
 
 def _backoff_delay(attempt: int, base: float = 0.5, cap: float = 8.0) -> float:

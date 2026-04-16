@@ -1,19 +1,38 @@
-from fastapi import FastAPI
+from fastapi import FastAPI, Response
 from fastapi.middleware.cors import CORSMiddleware
 from routers import task, workers, learning
 from core.limiter import limiter
 import uvicorn
 import logging
+
 from slowapi.middleware import SlowAPIMiddleware
 from slowapi.errors import RateLimitExceeded
 from slowapi import _rate_limit_exceeded_handler
+
 from config.constants import HOST, MODULE, PORT, RL_ENABLED
 from scheduling.learner import start_learner
 from db.connection import initialize_mongo
 
 from prometheus_client import Counter, Gauge, generate_latest, CONTENT_TYPE_LATEST
-from fastapi import Response
-import time
+from pythonjsonlogger import jsonlogger
+
+from core.metrics import (
+    pending_tasks_gauge,
+    active_workers_gauge,
+    rl_success_rate_gauge,
+)
+
+logger = logging.getLogger()
+
+if not logger.handlers:
+    handler = logging.StreamHandler()
+    formatter = jsonlogger.JsonFormatter(
+        "%(asctime)s %(name)s %(levelname)s %(message)s"
+    )
+    handler.setFormatter(formatter)
+    logger.addHandler(handler)
+
+logger.setLevel(logging.INFO)
 
 LOGGER = logging.getLogger("app-startup")
 
@@ -34,33 +53,6 @@ app.add_middleware(
 app.include_router(task.router, prefix="/tasks", tags=["tasks"])
 app.include_router(workers.router, prefix="/workers", tags=["workers"])
 app.include_router(learning.router, prefix="/learning", tags=["learning"])
-
-# Metrics
-tasks_submitted_total = Counter(
-    "tasks_submitted_total",
-    "Total number of tasks submitted",
-)
-tasks_completed_total = Counter(
-    "tasks_completed_total",
-    "Total number of tasks completed successfully",
-)
-tasks_failed_total = Counter(
-    "tasks_failed_total",
-    "Total number of tasks failed",
-)
-
-pending_tasks_gauge = Gauge(
-    "pending_tasks",
-    "Current number of pending tasks",
-)
-active_workers_gauge = Gauge(
-    "active_workers",
-    "Current number of active workers",
-)
-rl_success_rate_gauge = Gauge(
-    "rl_success_rate",
-    "RL success rate",
-)
 
 
 @app.on_event("startup")
