@@ -1,0 +1,107 @@
+name: CI/CD Pipeline
+
+on:
+  push:
+    branches: [ main, develop ]
+  pull_request:
+    branches: [ main ]
+
+env:
+  REGISTRY: ghcr.io
+  IMAGE_NAME_API: ${{ github.repository }}-api
+  IMAGE_NAME_WORKER: ${{ github.repository }}-worker
+  IMAGE_NAME_RECOVERY: ${{ github.repository }}-recovery
+  IMAGE_NAME_HEARTBEAT: ${{ github.repository }}-heartbeat
+  IMAGE_NAME_FRONTEND: ${{ github.repository }}-frontend
+
+jobs:
+  lint:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with: { python-version: '3.12' }
+      - run: pip install flake8 black
+      - run: flake8 . --max-line-length=127 --statistics
+      - run: black --check --diff .
+
+  test:
+    runs-on: ubuntu-latest
+    needs: lint
+    services:
+      mongodb:
+        image: mongo:7
+        ports: [ '27017:27017' ]
+        options: >-
+          --health-cmd "mongosh --eval 'db.runCommand({ping:1})'"
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with: { python-version: '3.12' }
+      - run: pip install -r requirements-dev.txt && pip install -e .
+      - run: pytest tests/ -v --cov=. --cov-report=term --cov-fail-under=70
+      - uses: actions/upload-artifact@v4
+        with:
+          name: coverage-report
+          path: htmlcov/
+          retention-days: 7
+
+  postman:
+    runs-on: ubuntu-latest
+    needs: lint
+    steps:
+      - uses: actions/checkout@v4
+      - run: npm install -g newman
+      - run: newman run tests/postman-collection.json
+
+  build:
+    runs-on: ubuntu-latest
+    needs: [test, postman]
+    steps:
+      - uses: actions/checkout@v4
+      - uses: docker/setup-buildx-action@v3
+      - run: docker build -t ${{ env.IMAGE_NAME_API }}:${{ github.sha }} -f Dockerfile.api .
+      - run: docker build -t ${{ env.IMAGE_NAME_WORKER }}:${{ github.sha }} -f Dockerfile.worker .
+      - run: docker build -t ${{ env.IMAGE_NAME_RECOVERY }}:${{ github.sha }} -f Dockerfile.recovery .
+      - run: docker build -t ${{ env.IMAGE_NAME_HEARTBEAT }}:${{ github.sha }} -f Dockerfile.heartbeat .
+      - run: docker build -t ${{ env.IMAGE_NAME_FRONTEND }}:${{ github.sha }} -f Dockerfile.frontend .
+
+  push:
+    runs-on: ubuntu-latest
+    needs: build
+    if: github.ref == 'refs/heads/main'
+    steps:
+      - uses: actions/checkout@v4
+      - uses: docker/login-action@v3
+        with:
+          registry: ${{ env.REGISTRY }}
+          username: ${{ github.actor }}
+          password: ${{ secrets.GHCR_TOKEN }}
+      - run: |
+          for img in api worker recovery heartbeat frontend; do
+            NAME="${{ env.IMAGE_NAME_${img^^} }}"
+            docker tag $NAME:${{ github.sha }} ${{ env.REGISTRY }}/$NAME:${{ github.sha }}
+            docker tag $NAME:${{ github.sha }} ${{ env.REGISTRY }}/$NAME:latest
+            docker push ${{ env.REGISTRY }}/$NAME:${{ github.sha }}
+            docker push ${{ env.REGISTRY }}/$NAME:latest
+          done
+        shell: bash
+
+  deploy:
+    runs-on: ubuntu-latest
+    needs: push
+    if: false   # enable when ready
+    steps:
+      - name: Deploy via SSH
+        uses: appleboy/ssh-action@v1.0.0
+        with:
+          host: ${{ secrets.STAGING_HOST }}
+          username: ${{ secrets.STAGING_USER }}
+          key: ${{ secrets.STAGING_KEY }}
+          script: |
+            cd /opt/task-orchestrator
+            docker-compose pull
+            docker-compose up -d

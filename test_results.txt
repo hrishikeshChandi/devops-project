@@ -1,0 +1,50 @@
+(node:18668) [DEP0176] DeprecationWarning: fs.F_OK is deprecated, use fs.constants.F_OK instead
+(Use `node --trace-deprecation ...` to show where the warning was created)
+newman
+
+Task Orchestrator API
+
+→ Health Check
+  GET http://localhost:8000/health [200 OK, 140B, 72ms]
+  √  Status is 200
+  √  Response has status field
+
+→ Get Workers
+  GET http://localhost:8000/workers/get_workers [200 OK, 287B, 7ms]
+  √  Status is 200
+  √  Response is array
+
+→ Submit Task
+  POST http://localhost:8000/tasks/submit [201 Created, 509B, 21ms]
+  √  Status is 201
+  √  Response has task ID
+
+→ Get Pending Tasks
+  GET http://localhost:8000/tasks/tasks [200 OK, 504B, 7ms]
+  √  Status is 200
+  √  Response is array
+
+→ RL Metrics
+  GET http://localhost:8000/learning/metrics/rl [200 OK, 181B, 9ms]
+  √  Status is 200
+  √  Has total_updates
+
+┌─────────────────────────┬──────────────────┬──────────────────┐
+│                         │         executed │           failed │
+├─────────────────────────┼──────────────────┼──────────────────┤
+│              iterations │                1 │                0 │
+├─────────────────────────┼──────────────────┼──────────────────┤
+│                requests │                5 │                0 │
+├─────────────────────────┼──────────────────┼──────────────────┤
+│            test-scripts │                5 │                0 │
+├─────────────────────────┼──────────────────┼──────────────────┤
+│      prerequest-scripts │                0 │                0 │
+├─────────────────────────┼──────────────────┼──────────────────┤
+│              assertions │               10 │                0 │
+├─────────────────────────┴──────────────────┴──────────────────┤
+│ total run duration: 446ms                                     │
+├───────────────────────────────────────────────────────────────┤
+│ total data received: 988B (approx)                            │
+├───────────────────────────────────────────────────────────────┤
+│ average response time: 23ms [min: 7ms, max: 72ms, s.d.: 24ms] │
+└───────────────────────────────────────────────────────────────┘

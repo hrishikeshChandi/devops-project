@@ -1,0 +1,108 @@
+{
+    "info": {
+        "name": "Task Orchestrator API",
+        "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
+    },
+    "item": [
+        {
+            "name": "Health Check",
+            "request": {
+                "method": "GET",
+                "url": "http://localhost:8000/health"
+            },
+            "event": [
+                {
+                    "listen": "test",
+                    "script": {
+                        "exec": [
+                            "pm.test('Status is 200', () => pm.response.to.have.status(200));",
+                            "pm.test('Response has status field', () => { const json = pm.response.json(); pm.expect(json).to.have.property('status'); });"
+                        ]
+                    }
+                }
+            ]
+        },
+        {
+            "name": "Get Workers",
+            "request": {
+                "method": "GET",
+                "url": "http://localhost:8000/workers/get_workers"
+            },
+            "event": [
+                {
+                    "listen": "test",
+                    "script": {
+                        "exec": [
+                            "pm.test('Status is 200', () => pm.response.to.have.status(200));",
+                            "pm.test('Response is array', () => { pm.expect(pm.response.json()).to.be.an('array'); });"
+                        ]
+                    }
+                }
+            ]
+        },
+        {
+            "name": "Submit Task",
+            "request": {
+                "method": "POST",
+                "header": [
+                    {
+                        "key": "Content-Type",
+                        "value": "application/json"
+                    }
+                ],
+                "url": "http://localhost:8000/tasks/submit",
+                "body": {
+                    "mode": "raw",
+                    "raw": "{\"data\":{\"task\":\"test\"},\"required_cpu\":2,\"required_ram\":4,\"priority\":1}"
+                }
+            },
+            "event": [
+                {
+                    "listen": "test",
+                    "script": {
+                        "exec": [
+                            "pm.test('Status is 201', () => pm.response.to.have.status(201));",
+                            "pm.test('Response has task ID', () => { const json = pm.response.json(); pm.expect(json).to.have.property('id'); });"
+                        ]
+                    }
+                }
+            ]
+        },
+        {
+            "name": "Get Pending Tasks",
+            "request": {
+                "method": "GET",
+                "url": "http://localhost:8000/tasks/tasks"
+            },
+            "event": [
+                {
+                    "listen": "test",
+                    "script": {
+                        "exec": [
+                            "pm.test('Status is 200', () => pm.response.to.have.status(200));",
+                            "pm.test('Response is array', () => { pm.expect(pm.response.json()).to.be.an('array'); });"
+                        ]
+                    }
+                }
+            ]
+        },
+        {
+            "name": "RL Metrics",
+            "request": {
+                "method": "GET",
+                "url": "http://localhost:8000/learning/metrics/rl"
+            },
+            "event": [
+                {
+                    "listen": "test",
+                    "script": {
+                        "exec": [
+                            "pm.test('Status is 200', () => pm.response.to.have.status(200));",
+                            "pm.test('Has total_updates', () => { const json = pm.response.json(); pm.expect(json).to.have.property('total_updates'); });"
+                        ]
+                    }
+                }
+            ]
+        }
+    ]
+}
