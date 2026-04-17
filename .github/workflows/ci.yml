@@ -8,11 +8,11 @@ on:
 
 env:
   REGISTRY: ghcr.io
-  IMAGE_NAME_API: ${{ github.repository_lower }}-api
-  IMAGE_NAME_WORKER: ${{ github.repository_lower }}-worker
-  IMAGE_NAME_RECOVERY: ${{ github.repository_lower }}-recovery
-  IMAGE_NAME_HEARTBEAT: ${{ github.repository_lower }}-heartbeat
-  IMAGE_NAME_FRONTEND: ${{ github.repository_lower }}-frontend
+  IMAGE_NAME_API: hrishikeshchandi/devops-project-api
+  IMAGE_NAME_WORKER: hrishikeshchandi/devops-project-worker
+  IMAGE_NAME_RECOVERY: hrishikeshchandi/devops-project-recovery
+  IMAGE_NAME_HEARTBEAT: hrishikeshchandi/devops-project-heartbeat
+  IMAGE_NAME_FRONTEND: hrishikeshchandi/devops-project-frontend
 
 jobs:
   lint:
