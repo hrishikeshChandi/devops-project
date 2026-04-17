@@ -98,34 +98,52 @@ jobs:
         run: docker build -t ${{ env.IMAGE_NAME_HEARTBEAT }}:${{ github.sha }} -f Dockerfile.heartbeat .
       - name: Build Frontend image
         run: docker build -t ${{ env.IMAGE_NAME_FRONTEND }}:${{ github.sha }} -f Dockerfile.frontend .
+      
       - name: Log in to GitHub Container Registry
         uses: docker/login-action@v3
         with:
           registry: ${{ env.REGISTRY }}
           username: ${{ github.actor }}
           password: ${{ secrets.GHCR_TOKEN }}
-      - name: Tag and push images
+      
+      - name: Log in to Docker Hub
+        uses: docker/login-action@v3
+        with:
+          username: ${{ secrets.DOCKER_USERNAME }}
+          password: ${{ secrets.DOCKER_PASSWORD }}
+      
+      - name: Tag and push to both registries
         run: |
           for img in API WORKER RECOVERY HEARTBEAT FRONTEND; do
             NAME_VAR="IMAGE_NAME_$img"
             NAME="${!NAME_VAR}"
+            
+            # Tag for ghcr.io
             docker tag $NAME:${{ github.sha }} ${{ env.REGISTRY }}/$NAME:${{ github.sha }}
             docker tag $NAME:${{ github.sha }} ${{ env.REGISTRY }}/$NAME:latest
             docker push ${{ env.REGISTRY }}/$NAME:${{ github.sha }}
             docker push ${{ env.REGISTRY }}/$NAME:latest
+            
+            # Tag for Docker Hub
+            DOCKER_HUB_NAME="hrishikeshchandi/${NAME#*/}"
+            docker tag $NAME:${{ github.sha }} $DOCKER_HUB_NAME:${{ github.sha }}
+            docker tag $NAME:${{ github.sha }} $DOCKER_HUB_NAME:latest
+            docker push $DOCKER_HUB_NAME:${{ github.sha }}
+            docker push $DOCKER_HUB_NAME:latest
           done
-  deploy:
-    runs-on: ubuntu-latest
-    needs: build-and-push 
-    if: false
-    steps:
-      - name: Deploy to staging via SSH
-        uses: appleboy/ssh-action@v1.0.0
-        with:
-          host: ${{ secrets.STAGING_HOST }}
-          username: ${{ secrets.STAGING_USER }}
-          key: ${{ secrets.STAGING_KEY }}
-          script: |
-            cd /opt/task-orchestrator
-            docker compose pull
-            docker compose up -d
+          
+  # deploy:
+  #   runs-on: ubuntu-latest
+  #   needs: build-and-push 
+  #   if: false
+  #   steps:
+  #     - name: Deploy to staging via SSH
+  #       uses: appleboy/ssh-action@v1.0.0
+  #       with:
+  #         host: ${{ secrets.STAGING_HOST }}
+  #         username: ${{ secrets.STAGING_USER }}
+  #         key: ${{ secrets.STAGING_KEY }}
+  #         script: |
+  #           cd /opt/task-orchestrator
+  #           docker compose pull
+  #           docker compose up -d
