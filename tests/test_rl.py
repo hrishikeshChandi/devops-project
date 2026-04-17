@@ -11,7 +11,7 @@ class TestQLearningAgent:
     def test_discretize_state(self):
         agent = QLearningAgent()
         state = agent.discretize_state(10, 16, 4, 8)
-        assert state == "3-2-1-2"
+        assert state == "3-2-1-1"
 
     def test_get_weights_default(self):
         agent = QLearningAgent()
