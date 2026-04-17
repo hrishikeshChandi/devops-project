@@ -13,13 +13,12 @@ from config.constants import HOST, MODULE, PORT, RL_ENABLED
 from scheduling.learner import start_learner
 from db.connection import initialize_mongo
 
-from prometheus_client import Counter, Gauge, generate_latest, CONTENT_TYPE_LATEST
+from prometheus_client import generate_latest, CONTENT_TYPE_LATEST
 from pythonjsonlogger import jsonlogger
 
 from core.metrics import (
     pending_tasks_gauge,
     active_workers_gauge,
-    rl_success_rate_gauge,
 )
 
 logger = logging.getLogger()

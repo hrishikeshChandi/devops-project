@@ -1,6 +1,5 @@
 import logging
 import threading
-import time
 
 from pymongo.errors import PyMongoError
 
