@@ -1,18 +1,18 @@
-import argparse
-import logging
 import os
-import random
 import sys
-import threading
-import time
-from typing import Optional
-import requests
 
 sys.path.append(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 
-from config.constants import HEARTBEAT_INTERVAL, HOST, PORT
 import logging
+import random
+import threading
+import time
+from typing import Optional
+
+import requests
 from pythonjsonlogger import jsonlogger
+
+from config.constants import HEARTBEAT_INTERVAL, HOST, PORT
 
 logger = logging.getLogger(__name__)
 

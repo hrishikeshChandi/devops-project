@@ -1,6 +1,7 @@
-from pydantic import BaseModel, Field
-from typing import Dict, Optional, List
 from datetime import datetime, timezone
+from typing import Dict, List, Optional
+
+from pydantic import BaseModel, Field
 
 
 class WorkerCreate(BaseModel):

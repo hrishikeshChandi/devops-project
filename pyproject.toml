@@ -9,6 +9,7 @@ dependencies = [
     "fastapi>=0.135.2",
     "flake8==7.0.0",
     "httpx==0.26.0",
+    "isort>=8.0.1",
     "prometheus-client>=0.25.0",
     "pymongo>=4.16.0",
     "pytest==8.0.0",

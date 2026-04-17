@@ -1,6 +1,8 @@
-from db.connection import task_history_collection
-from pymongo.errors import PyMongoError
 import logging
+
+from pymongo.errors import PyMongoError
+
+from db.connection import task_history_collection
 
 LOGGER = logging.getLogger("duration-estimator")
 

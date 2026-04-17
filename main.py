@@ -1,25 +1,20 @@
-from fastapi import FastAPI, Response
-from fastapi.middleware.cors import CORSMiddleware
-from routers import task, workers, learning
-from core.limiter import limiter
-import uvicorn
 import logging
 
-from slowapi.middleware import SlowAPIMiddleware
-from slowapi.errors import RateLimitExceeded
+import uvicorn
+from fastapi import FastAPI, Response
+from fastapi.middleware.cors import CORSMiddleware
+from prometheus_client import CONTENT_TYPE_LATEST, generate_latest
+from pythonjsonlogger import jsonlogger
 from slowapi import _rate_limit_exceeded_handler
+from slowapi.errors import RateLimitExceeded
+from slowapi.middleware import SlowAPIMiddleware
 
 from config.constants import HOST, MODULE, PORT, RL_ENABLED
-from scheduling.learner import start_learner
+from core.limiter import limiter
+from core.metrics import active_workers_gauge, pending_tasks_gauge
 from db.connection import initialize_mongo
-
-from prometheus_client import generate_latest, CONTENT_TYPE_LATEST
-from pythonjsonlogger import jsonlogger
-
-from core.metrics import (
-    pending_tasks_gauge,
-    active_workers_gauge,
-)
+from routers import learning, task, workers
+from scheduling.learner import start_learner
 
 logger = logging.getLogger()
 

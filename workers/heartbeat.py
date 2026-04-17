@@ -1,18 +1,20 @@
-import sys
 import os
+import sys
 
 sys.path.append(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 
-import time
-from bson import ObjectId
-from typing import List
-from datetime import datetime, timezone
-from db.connection import workers_collection, task_collection
-from config.constants import MAX_RETRIES, HEARTBEAT_TIMEOUT
-from pymongo.errors import PyMongoError
 
 import logging
+import time
+from datetime import datetime, timezone
+from typing import List
+
+from bson import ObjectId
+from pymongo.errors import PyMongoError
 from pythonjsonlogger import jsonlogger
+
+from config.constants import HEARTBEAT_TIMEOUT, MAX_RETRIES
+from db.connection import task_collection, workers_collection
 
 logger = logging.getLogger(__name__)
 

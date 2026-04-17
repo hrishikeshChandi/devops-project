@@ -1,11 +1,11 @@
 import logging
+from datetime import datetime, timezone
 
-from fastapi import APIRouter, status, HTTPException
+from bson import ObjectId
+from fastapi import APIRouter, HTTPException, status
 from pymongo.errors import PyMongoError
 
-from db.connection import task_history_collection, task_collection, q_table_collection
-from bson import ObjectId
-from datetime import datetime, timezone
+from db.connection import q_table_collection, task_collection, task_history_collection
 from scheduling.estimator import DurationEstimator
 
 router = APIRouter()

@@ -1,5 +1,5 @@
-from scheduling.rl_agent import QLearningAgent
 from scheduling.estimator import DurationEstimator
+from scheduling.rl_agent import QLearningAgent
 
 
 class TestQLearningAgent:

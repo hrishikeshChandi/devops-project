@@ -1,9 +1,9 @@
-from datetime import datetime, timedelta, timezone
-from functools import lru_cache
 import logging
 import random
 import threading
 import time
+from datetime import datetime, timedelta, timezone
+from functools import lru_cache
 
 from bson import ObjectId
 from fastapi import APIRouter, HTTPException, Request, status
@@ -11,16 +11,15 @@ from pymongo import ReturnDocument
 from pymongo.errors import ConnectionFailure, PyMongoError
 
 from config.constants import HEARTBEAT_TIMEOUT
+from core.metrics import (
+    tasks_completed_total,
+    tasks_failed_total,
+    tasks_submitted_total,
+)
 from db.connection import task_collection, workers_collection
 from models.model import StatusUpdate, Task, TaskCreate, TaskResponse
 from scheduling.estimator import DurationEstimator
 from scheduling.rl_agent import QLearningAgent
-
-from core.metrics import (
-    tasks_submitted_total,
-    tasks_completed_total,
-    tasks_failed_total,
-)
 
 router = APIRouter()
 estimator = DurationEstimator()
