@@ -49,8 +49,13 @@ jobs:
           python-version: '3.12'
       - name: Install dependencies
         run: |
+          pip install -r requirements.txt
           pip install -r requirements-dev.txt
+      - name: Wait for MongoDB
+        run: sleep 10
       - name: Run pytest with coverage
+        env:
+          MONGO_URI: mongodb://localhost:27017/
         run: |
           pytest tests/ -v --cov=. --cov-report=term --cov-report=html --cov-fail-under=70
       - name: Upload coverage report
@@ -140,7 +145,7 @@ jobs:
   deploy:
     runs-on: ubuntu-latest
     needs: push
-    if: false   # Set to true when staging server is ready
+    if: false
     steps:
       - name: Deploy to staging via SSH
         uses: appleboy/ssh-action@v1.0.0
