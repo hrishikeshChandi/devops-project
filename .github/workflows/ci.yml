@@ -49,6 +49,7 @@ jobs:
           python-version: '3.12'
       - name: Install dependencies
         run: |
+          pip install -r requirements.txt
           pip install -r requirements-dev.txt
       - name: Wait for MongoDB
         run: sleep 10
@@ -97,6 +98,8 @@ jobs:
         run: docker build -t ${{ env.IMAGE_NAME_HEARTBEAT }}:${{ github.sha }} -f Dockerfile.heartbeat .
       - name: Build Frontend image
         run: docker build -t ${{ env.IMAGE_NAME_FRONTEND }}:${{ github.sha }} -f Dockerfile.frontend .
+      - name: List built images
+        run: docker images
 
   push:
     runs-on: ubuntu-latest
@@ -110,6 +113,8 @@ jobs:
           registry: ${{ env.REGISTRY }}
           username: ${{ github.actor }}
           password: ${{ secrets.GHCR_TOKEN }}
+      - name: Verify API image exists
+        run: docker image inspect ${{ env.IMAGE_NAME_API }}:${{ github.sha }}
       - name: Tag and push API image
         run: |
           docker tag ${{ env.IMAGE_NAME_API }}:${{ github.sha }} ${{ env.REGISTRY }}/${{ env.IMAGE_NAME_API }}:${{ github.sha }}
