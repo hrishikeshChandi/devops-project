@@ -1,5 +1,10 @@
-from scheduling.estimator import DurationEstimator
+import sys
+import os
+
+sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
+
 from scheduling.rl_agent import QLearningAgent
+from scheduling.estimator import DurationEstimator
 
 
 class TestQLearningAgent:
@@ -11,21 +16,30 @@ class TestQLearningAgent:
     def test_get_weights_default(self):
         agent = QLearningAgent()
         agent.q_table = {}
-        w1, w2 = agent.get_weights("x")
-        assert w1 == 0.7 and w2 == 0.3
+        w_prio, w_dur = agent.get_weights("non-existent")
+        assert w_prio == 0.7
+        assert w_dur == 0.3
 
     def test_update_q(self):
         agent = QLearningAgent()
         agent.q_table = {}
-        agent.update_q("s", 0, 10, "s")
-        assert "s" in agent.q_table
+        state = "1-1-1-1"
+        agent.update_q(state, 0, 10.0, state)
+        assert state in agent.q_table
+        assert agent.q_table[state][0] > 0
 
 
 class TestDurationEstimator:
-    def test_cpu_bin(self):
+    def test_get_cpu_bin(self):
         assert DurationEstimator.get_cpu_bin(1) == "0-2"
+        assert DurationEstimator.get_cpu_bin(3) == "2-4"
+        assert DurationEstimator.get_cpu_bin(6) == "4-8"
+        assert DurationEstimator.get_cpu_bin(12) == "8-16"
         assert DurationEstimator.get_cpu_bin(20) == "16+"
 
-    def test_ram_bin(self):
+    def test_get_ram_bin(self):
         assert DurationEstimator.get_ram_bin(2) == "0-4"
+        assert DurationEstimator.get_ram_bin(6) == "4-8"
+        assert DurationEstimator.get_ram_bin(12) == "8-16"
+        assert DurationEstimator.get_ram_bin(24) == "16-32"
         assert DurationEstimator.get_ram_bin(40) == "32+"
