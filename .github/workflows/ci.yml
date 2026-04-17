@@ -80,9 +80,10 @@ jobs:
       - name: Stop Docker Compose
         run: docker compose down
 
-  build:
+  build-and-push:
     runs-on: ubuntu-latest
     needs: [test, postman]
+    if: github.ref == 'refs/heads/main'
     steps:
       - uses: actions/checkout@v4
       - name: Set up Docker Buildx
@@ -97,57 +98,25 @@ jobs:
         run: docker build -t ${{ env.IMAGE_NAME_HEARTBEAT }}:${{ github.sha }} -f Dockerfile.heartbeat .
       - name: Build Frontend image
         run: docker build -t ${{ env.IMAGE_NAME_FRONTEND }}:${{ github.sha }} -f Dockerfile.frontend .
-      - name: List built images
-        run: docker images
-
-  push:
-    runs-on: ubuntu-latest
-    needs: build
-    if: github.ref == 'refs/heads/main'
-    steps:
-      - uses: actions/checkout@v4
       - name: Log in to GitHub Container Registry
         uses: docker/login-action@v3
         with:
           registry: ${{ env.REGISTRY }}
           username: ${{ github.actor }}
           password: ${{ secrets.GHCR_TOKEN }}
-      - name: Verify API image exists
-        run: docker image inspect ${{ env.IMAGE_NAME_API }}:${{ github.sha }}
-      - name: Tag and push API image
+      - name: Tag and push images
         run: |
-          docker tag ${{ env.IMAGE_NAME_API }}:${{ github.sha }} ${{ env.REGISTRY }}/${{ env.IMAGE_NAME_API }}:${{ github.sha }}
-          docker tag ${{ env.IMAGE_NAME_API }}:${{ github.sha }} ${{ env.REGISTRY }}/${{ env.IMAGE_NAME_API }}:latest
-          docker push ${{ env.REGISTRY }}/${{ env.IMAGE_NAME_API }}:${{ github.sha }}
-          docker push ${{ env.REGISTRY }}/${{ env.IMAGE_NAME_API }}:latest
-      - name: Tag and push Worker image
-        run: |
-          docker tag ${{ env.IMAGE_NAME_WORKER }}:${{ github.sha }} ${{ env.REGISTRY }}/${{ env.IMAGE_NAME_WORKER }}:${{ github.sha }}
-          docker tag ${{ env.IMAGE_NAME_WORKER }}:${{ github.sha }} ${{ env.REGISTRY }}/${{ env.IMAGE_NAME_WORKER }}:latest
-          docker push ${{ env.REGISTRY }}/${{ env.IMAGE_NAME_WORKER }}:${{ github.sha }}
-          docker push ${{ env.REGISTRY }}/${{ env.IMAGE_NAME_WORKER }}:latest
-      - name: Tag and push Recovery image
-        run: |
-          docker tag ${{ env.IMAGE_NAME_RECOVERY }}:${{ github.sha }} ${{ env.REGISTRY }}/${{ env.IMAGE_NAME_RECOVERY }}:${{ github.sha }}
-          docker tag ${{ env.IMAGE_NAME_RECOVERY }}:${{ github.sha }} ${{ env.REGISTRY }}/${{ env.IMAGE_NAME_RECOVERY }}:latest
-          docker push ${{ env.REGISTRY }}/${{ env.IMAGE_NAME_RECOVERY }}:${{ github.sha }}
-          docker push ${{ env.REGISTRY }}/${{ env.IMAGE_NAME_RECOVERY }}:latest
-      - name: Tag and push Heartbeat image
-        run: |
-          docker tag ${{ env.IMAGE_NAME_HEARTBEAT }}:${{ github.sha }} ${{ env.REGISTRY }}/${{ env.IMAGE_NAME_HEARTBEAT }}:${{ github.sha }}
-          docker tag ${{ env.IMAGE_NAME_HEARTBEAT }}:${{ github.sha }} ${{ env.REGISTRY }}/${{ env.IMAGE_NAME_HEARTBEAT }}:latest
-          docker push ${{ env.REGISTRY }}/${{ env.IMAGE_NAME_HEARTBEAT }}:${{ github.sha }}
-          docker push ${{ env.REGISTRY }}/${{ env.IMAGE_NAME_HEARTBEAT }}:latest
-      - name: Tag and push Frontend image
-        run: |
-          docker tag ${{ env.IMAGE_NAME_FRONTEND }}:${{ github.sha }} ${{ env.REGISTRY }}/${{ env.IMAGE_NAME_FRONTEND }}:${{ github.sha }}
-          docker tag ${{ env.IMAGE_NAME_FRONTEND }}:${{ github.sha }} ${{ env.REGISTRY }}/${{ env.IMAGE_NAME_FRONTEND }}:latest
-          docker push ${{ env.REGISTRY }}/${{ env.IMAGE_NAME_FRONTEND }}:${{ github.sha }}
-          docker push ${{ env.REGISTRY }}/${{ env.IMAGE_NAME_FRONTEND }}:latest
-
+          for img in API WORKER RECOVERY HEARTBEAT FRONTEND; do
+            NAME_VAR="IMAGE_NAME_$img"
+            NAME="${!NAME_VAR}"
+            docker tag $NAME:${{ github.sha }} ${{ env.REGISTRY }}/$NAME:${{ github.sha }}
+            docker tag $NAME:${{ github.sha }} ${{ env.REGISTRY }}/$NAME:latest
+            docker push ${{ env.REGISTRY }}/$NAME:${{ github.sha }}
+            docker push ${{ env.REGISTRY }}/$NAME:latest
+          done
   deploy:
     runs-on: ubuntu-latest
-    needs: push
+    needs: build-and-push 
     if: false
     steps:
       - name: Deploy to staging via SSH
