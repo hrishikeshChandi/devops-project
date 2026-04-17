@@ -50,7 +50,6 @@ jobs:
       - name: Install dependencies
         run: |
           pip install -r requirements-dev.txt
-          pip install -e .
       - name: Run pytest with coverage
         run: |
           pytest tests/ -v --cov=. --cov-report=term --cov-report=html --cov-fail-under=70
@@ -66,10 +65,16 @@ jobs:
     needs: lint
     steps:
       - uses: actions/checkout@v4
+      - name: Start Docker Compose
+        run: |
+          docker-compose up -d
+          sleep 10
       - name: Install Newman
         run: npm install -g newman
       - name: Run Postman collection
         run: newman run tests/postman-collection.json
+      - name: Stop Docker Compose
+        run: docker-compose down
 
   build:
     runs-on: ubuntu-latest

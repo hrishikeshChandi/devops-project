@@ -22,3 +22,18 @@ dependencies = [
     "streamlit>=1.55.0",
     "uvicorn>=0.42.0",
 ]
+
+[tool.setuptools]
+packages = [
+    "config",
+    "core",
+    "db",
+    "models",
+    "recovery",
+    "routers",
+    "scheduling",
+    "workers",
+]
+
+[tool.setuptools.package-data]
+"*" = ["*.yaml", "*.yml", "*.json"]
